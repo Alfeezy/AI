@@ -1,20 +1,19 @@
 /*
   Name: Bastien Gliech
   CIS 421 Artificial Intelligence
-  Assignment: 1 - R flex Agent
+  Assignment: 1 - Reflex Agent
   Due: February 5, 2018
 */
+
+// RoombaMap
+//
+// RoombaMap handles the bulk of the simulation, such as keeping track of all
+// coordinates and states of objects, and map and log updating and printing
 
 import java.util.*;
 import java.io.*;
 import java.awt.*;
 
-/* ****************
- *
- * 
- */
-
-//
 public class RoombaMap {
 
   // Fields
@@ -25,7 +24,6 @@ public class RoombaMap {
   LinkedList<Point> dirtPiles; // Stores locations of dirt piles
   LinkedList<Point> furniture; // Stores locations of furniture
   Direction compass; // Compass aids in rotation and char -> vec translation
-
 
   // Constructor; Builds a map using a specified map file
   //
@@ -41,10 +39,6 @@ public class RoombaMap {
     size = input.nextInt();
     grid = new char[size][size];
 
-    roombaLoc = new Point(0,0); // Sets the roomba's location
-    grid[0][0] = '^';
-    buildCompass(); // Builds the compass, roomba starts pointing up
-
     // Creates linked lists
     dirtPiles = new LinkedList<Point>();
     furniture = new LinkedList<Point>();
@@ -53,6 +47,10 @@ public class RoombaMap {
     for (char[] row : grid){
       Arrays.fill(row, ' ');
     }
+
+    roombaLoc = new Point(0,0); // Sets the roomba's location
+    grid[0][0] = '^';
+    buildCompass(); // Builds the compass, roomba starts pointing up
 
     // Stores number of dirt piles and furniture
     int dirtAmt = input.nextInt();
@@ -85,12 +83,101 @@ public class RoombaMap {
     }
   }
 
+  // Returns the percept vector for current state:
+  // <T, Du, Df, Dr, Db, Dl, Gu, Gf, Gr, Gb, Gl>
+  // where: u = under, f = front, b = back, l = left, r = right
+  //
+  // Parameter: none
+  // Pre-condition: compass and roombaLoc hold accurate values
+  // Post-condition: perception vector is returned
+  //
+  public boolean[] makePerceptVector(){
+
+    boolean[] percepts = new boolean[11];
+
+    // i0 : T - false if nothing is in front of roomba
+    //          true if there is furniture or wall in front of roomba
+    Point test = new Point(roombaLoc);
+    test.translate((int)compass.dir.getX(), (int)compass.dir.getY());
+    percepts[0] = furniture.contains(test) || (int)test.getX() < 0 ||
+                  (int)test.getX() > size - 1 || 
+                  (int)test.getY() < 0 ||
+                  (int)test.getY() > size - 1;
+
+    // i1 : Du - false if dirt is not under roomba
+    //           true if dirt is under roomba
+    percepts[1] = dirtPiles.contains(roombaLoc);
+
+    // i2-5 : Dx - false if dirt is not around roomba
+    //             true is dirt is around roomba
+    for (int i = 2; i < 6; i++){
+      test = new Point(roombaLoc);
+      test.translate((int)compass.dir.getX(), (int)compass.dir.getY());
+      percepts[i] = dirtPiles.contains(test);
+      compass = compass.right;
+    }
+
+    // i6 : Gu - false if goal is not under roomba
+    //           true if goal is under roomba
+    percepts[6] = roombaLoc.equals(goal);
+
+    // i7-10 : Gx - false if goal is not around roomba
+    //            - true is goal is around roomba
+    for (int i = 7; i < 11; i++){
+      test = new Point(roombaLoc);
+      test.translate((int)compass.dir.getX(), (int)compass.dir.getY());
+      percepts[i] = test.equals(goal);
+      compass = compass.right;
+    }
+
+    // Returns percept vector
+    return percepts;
+  }
+
+  // Roomba performs an action, adds to memory
+  //
+  // Parameter: none
+  // Pre-condition: action recieved is possible
+  // Post-condition: roomba performs one action, map and values updated
+  //
+  public void nextAction(int move){
+    
+    switch (move) {
+
+      // Sucks up dirt
+      case 1: dirtPiles.remove(roombaLoc);
+              break;
+
+      // Moves forward one step
+      case 2: roombaLoc.translate((int)compass.dir.getX(), 
+                                  (int)compass.dir.getY());
+              break;
+
+      // Turns left
+      case 3: compass = compass.left;
+              break;
+
+      // Turns right
+      case 4: compass = compass.right;
+              break;
+    }
+  }
+
   // Prints the map to a text file
   //
-  // Pre-Condition: Map exists and object data is properly stored
-  // Post-Condition: Map is printed
+  // Parameter: none
+  // Pre-Condition: map exists and object data is properly stored
+  // Post-Condition: map is printed
   //
   public void printDisplay(){
+
+    // makes space for new map
+    System.out.println();
+
+    // Fills the entire board with blank state (' ')
+    for (char[] row : grid){
+      Arrays.fill(row, ' ');
+    }
 
     // Preliminary furniture update
     for (Point p : furniture){
@@ -102,8 +189,15 @@ public class RoombaMap {
       grid[(int)q.getX()][(int)q.getY()] = '#';
     }
 
+    // Preliminary home update
+    grid[0][0] = 'H';
+
+    // Preliminary goal update
+    grid[(int)goal.getX()][(int)goal.getY()] = 'G';
+
     // Preliminary roomba update
     grid[(int)roombaLoc.getX()][(int)roombaLoc.getY()] = compass.data;
+
 
     // Prints top line
     for (int i = 0; i < size; i++){
@@ -140,53 +234,19 @@ public class RoombaMap {
       System.out.print("+-");
     }
     System.out.println("+");
-  }
 
-  // Returns the percept vector for current state:
-  // <T, Du, Df, Dr, Db, Dl, Gu, Gf, Gr, Gl, Gb>
-  // where: u = under, f = front, b = back, l = left, r = right
-  public boolean[] makePerceptVector(){
-
-    boolean[] percepts = new boolean[11];
-
-    // i0 : T - false if nothing is in front of roomba
-    //          true if there is furniture in front of roomba
-    Point test = new Point((int)roombaLoc.getX(), (int)roombaLoc.getY());
-    test.move((int)compass.dir.getX(), (int)compass.dir.getY());
-    percepts[0] = furniture.contains(test);
-
-    // i1 : Du - false if dirt is not under roomba
-    //           true if dirt is under roomba
-    percepts[1] = dirtPiles.contains(roombaLoc);
-
-    // i3-6 : Dx - false if dirt is not around roomba
-    //             true is dirt is around roomba
-    for (int i = 3; i < 7; i++){
-      test = roombaLoc;
-      test.move((int)compass.dir.getX(), (int)compass.dir.getY());
-      percepts[i] = dirtPiles.contains(roombaLoc);
-      compass = compass.right;
+    // Prints percept vector on the bottom
+    System.out.println("\nT\tDU\tDF\tDR\tDB\tDL\tGU\tGF\tGR\tGB\tGL");
+    boolean[] temp = makePerceptVector();
+    for (int i = 0; i < 11; i++){
+      if (temp[i]){
+        System.out.print("1\t");
+      } else {
+        System.out.print("0\t");
+      }
     }
-
-    // i7 : Gu - false if goal is not under roomba
-    //           true if goal is under roomba
-    percepts[7] = roombaLoc.equals(goal);
-
-    // i8-11 : Gx - false if goal is not around roomba
-    //            - true is goal is around roomba
-    for (int i = 8; i < 12; i++){
-      test = roombaLoc;
-      test.move((int)compass.dir.getX(), (int)compass.dir.getY());
-      percepts[i] = roombaLoc.equals(goal);
-      compass = compass.right;
-    }
-
-    // Returns percept vector
-    return percepts;
+    System.out.println("");
   }
-
-  // Moves the 
-  public void nextMove(){}
 
   // Object which stores direction, and points to other directions
   // that are perpendicular to itself
