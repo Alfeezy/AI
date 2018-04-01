@@ -11,7 +11,7 @@ import java.util.*;
 public class Edge{
 
   // fields
-  public int heuristic; // heuristic cost of this edge
+  public int weight; // weight cost of this edge
   public int n1, n2; // towards 
   public double pheremone; // pheremone level currently on this edge
 
@@ -19,13 +19,13 @@ public class Edge{
    *
    * @param: int n1 -- first node
    *         int n2 -- seconds node
-   * @pre:
-   * @post:
+   * @pre: none
+   * @post: Edge is created
    */ 
   public Edge(int n1, int n2, int h){
 
-    // sets heuristic
-    this.heuristic = h;
+    // sets weight
+    this.weight = h;
 
     // sets location indices
     this.n1 = n1;
