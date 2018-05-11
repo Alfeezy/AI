@@ -1,0 +1,25 @@
+/*
+  Name: Bastien Gliech
+  CIS 421 Artificial Intelligence
+  Assignment: 7 - Q Learning
+  Due: May 8, 2018
+*/
+
+README:
+
+## TO RUN ##
+
+1. Compile all files with 
+    >javac QLearning.java Agent.java Universe.java State.java
+2. run QLearning.java with 
+    >java QLearning -filename -variation
+    where:
+        -filename is the name of your file
+        -variation is the variation type (1, 2, or 3):
+            1 : Static Trolls
+            2 : Variable Learning Rate
+            3 : Moving Trolls
+
+## TO CHANGE RUNTIME VARIABLE ##
+
+Open QLearning.java to access learning rate and discount factor
